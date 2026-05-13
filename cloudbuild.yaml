@@ -29,9 +29,9 @@ steps:
       - managed
       - --allow-unauthenticated
       - --memory
-      - 1Gi
+      - 2Gi
       - --cpu
-      - "1"
+      - "2"
       - --timeout
       - "300"
       - --set-env-vars

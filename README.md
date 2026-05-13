@@ -57,8 +57,8 @@ gcloud run deploy looker-studio-pdf-api \
   --platform managed \
   --region europe-west2 \
   --allow-unauthenticated \
-  --memory 1Gi \
-  --cpu 1 \
+  --memory 2Gi \
+  --cpu 2 \
   --timeout 300 \
   --set-env-vars LOOKER_PUPPETEER_HEADLESS=true,LOOKER_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ```

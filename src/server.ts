@@ -24,6 +24,13 @@ function getFirstQueryValue(value: unknown): string | undefined {
   return String(value);
 }
 
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    service: 'looker-studio-pdf-api',
+  });
+});
+
 app.get('/report/looker-studio/blue-award/merged-download', async (req: Request, res: Response) => {
   try {
     const submissionIdValue = getFirstQueryValue(req.query.submissionId) || getFirstQueryValue(req.query.p_submission_id);
