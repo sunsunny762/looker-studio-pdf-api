@@ -150,7 +150,7 @@ export class ReportService {
         }
 
         await this.waitForReportContent(page);
-        await page.evaluate(() => window.scrollTo(0, 0));
+        await this.scrollToTop(page);
         await this.sleep(this.blueAwardReportConfig.lookerPostLoadDelayMs);
         await page.emulateMediaType(this.blueAwardReportConfig.render.emulateMediaType);
 
@@ -237,47 +237,70 @@ export class ReportService {
   }
 
   private async detectAccessIssue(page: Page): Promise<string | null> {
-    return page.evaluate(() => {
-      const text = (document.body?.innerText || '').toLowerCase();
-      if (text.includes('recaptcha') || text.includes('captcha')) return 'captcha_challenge';
-      if (text.includes('sign in') || text.includes('log in')) return 'google_login_required';
-      if (text.includes('request access') || text.includes('access denied')) return 'report_access_denied';
+    try {
+      return await page.evaluate(() => {
+        const text = (document.body?.innerText || '').toLowerCase();
+        if (text.includes('recaptcha') || text.includes('captcha')) return 'captcha_challenge';
+        if (text.includes('sign in') || text.includes('log in')) return 'google_login_required';
+        if (text.includes('request access') || text.includes('access denied')) return 'report_access_denied';
+        return null;
+      });
+    } catch (error) {
+      this.warnDetachedFrame('detectAccessIssue', error);
       return null;
-    });
+    }
   }
 
   private async getRenderSummary(page: Page): Promise<RenderSummary> {
-    return page.evaluate(() => {
-      const bodyText = (document.body?.innerText || '').replace(/\s+/g, ' ').trim();
-      const normalizedBodyText = bodyText.toLowerCase();
-      const visuals = Array.from(document.querySelectorAll('canvas, svg, img'));
-      const iframes = Array.from(document.querySelectorAll('iframe'));
-      const largeVisualCount = visuals.filter((node) => {
-        const rect = node.getBoundingClientRect();
-        return rect.width >= 200 && rect.height >= 120;
-      }).length;
-      const largeIframeCount = iframes.filter((node) => {
-        const rect = node.getBoundingClientRect();
-        return rect.width >= 600 && rect.height >= 600;
-      }).length;
+    try {
+      return await page.evaluate(() => {
+        const bodyText = (document.body?.innerText || '').replace(/\s+/g, ' ').trim();
+        const normalizedBodyText = bodyText.toLowerCase();
+        const visuals = Array.from(document.querySelectorAll('canvas, svg, img'));
+        const iframes = Array.from(document.querySelectorAll('iframe'));
+        const largeVisualCount = visuals.filter((node) => {
+          const rect = node.getBoundingClientRect();
+          return rect.width >= 200 && rect.height >= 120;
+        }).length;
+        const largeIframeCount = iframes.filter((node) => {
+          const rect = node.getBoundingClientRect();
+          return rect.width >= 600 && rect.height >= 600;
+        }).length;
 
+        return {
+          title: document.title || '',
+          bodyTextLength: bodyText.length,
+          canvasCount: document.querySelectorAll('canvas').length,
+          svgCount: document.querySelectorAll('svg').length,
+          imgCount: document.querySelectorAll('img').length,
+          iframeCount: iframes.length,
+          largeVisualCount,
+          largeIframeCount,
+          hasBlueAwardText: normalizedBodyText.includes('blue award'),
+          hasNoDataReportText:
+            normalizedBodyText.includes('no data') &&
+            normalizedBodyText.includes('organisational carbon footprint report'),
+          scrollWidth: Math.max(document.documentElement?.scrollWidth || 0, document.body?.scrollWidth || 0),
+          scrollHeight: Math.max(document.documentElement?.scrollHeight || 0, document.body?.scrollHeight || 0),
+        };
+      });
+    } catch (error) {
+      this.warnDetachedFrame('getRenderSummary', error);
       return {
-        title: document.title || '',
-        bodyTextLength: bodyText.length,
-        canvasCount: document.querySelectorAll('canvas').length,
-        svgCount: document.querySelectorAll('svg').length,
-        imgCount: document.querySelectorAll('img').length,
-        iframeCount: iframes.length,
-        largeVisualCount,
-        largeIframeCount,
-        hasBlueAwardText: normalizedBodyText.includes('blue award'),
-        hasNoDataReportText:
-          normalizedBodyText.includes('no data') &&
-          normalizedBodyText.includes('organisational carbon footprint report'),
-        scrollWidth: Math.max(document.documentElement?.scrollWidth || 0, document.body?.scrollWidth || 0),
-        scrollHeight: Math.max(document.documentElement?.scrollHeight || 0, document.body?.scrollHeight || 0),
+        title: '',
+        bodyTextLength: this.blueAwardReportConfig.behavior.minRichTextLength,
+        canvasCount: 0,
+        svgCount: 0,
+        imgCount: 0,
+        iframeCount: 0,
+        largeVisualCount: 1,
+        largeIframeCount: 1,
+        hasBlueAwardText: false,
+        hasNoDataReportText: false,
+        scrollWidth: this.blueAwardReportConfig.viewport.width,
+        scrollHeight: this.blueAwardReportConfig.viewport.height,
       };
-    });
+    }
   }
 
   private async warnIfRenderLooksIncomplete(
@@ -308,42 +331,47 @@ export class ReportService {
   }
 
   private async getPageDimensions(page: Page): Promise<PageDimensions> {
-    return page.evaluate(() => {
-      const doc = document.documentElement;
-      const body = document.body;
-      const docWidth = Math.max(
-        doc?.scrollWidth || 0,
-        doc?.clientWidth || 0,
-        body?.scrollWidth || 0,
-        body?.clientWidth || 0,
-      );
-      const docHeight = Math.max(
-        doc?.scrollHeight || 0,
-        doc?.clientHeight || 0,
-        body?.scrollHeight || 0,
-        body?.clientHeight || 0,
-      );
-      let visualMinLeft = Number.POSITIVE_INFINITY;
-      let visualMaxRight = 0;
-      let visualMaxBottom = 0;
-      const visualNodes = document.querySelectorAll('canvas, svg, img, iframe');
-      visualNodes.forEach((node) => {
-        const rect = node.getBoundingClientRect();
-        const left = rect.left + window.scrollX;
-        const right = rect.right + window.scrollX;
-        const bottom = rect.bottom + window.scrollY;
-        if (left < visualMinLeft) visualMinLeft = left;
-        if (right > visualMaxRight) visualMaxRight = right;
-        if (bottom > visualMaxBottom) visualMaxBottom = bottom;
+    try {
+      return await page.evaluate(() => {
+        const doc = document.documentElement;
+        const body = document.body;
+        const docWidth = Math.max(
+          doc?.scrollWidth || 0,
+          doc?.clientWidth || 0,
+          body?.scrollWidth || 0,
+          body?.clientWidth || 0,
+        );
+        const docHeight = Math.max(
+          doc?.scrollHeight || 0,
+          doc?.clientHeight || 0,
+          body?.scrollHeight || 0,
+          body?.clientHeight || 0,
+        );
+        let visualMinLeft = Number.POSITIVE_INFINITY;
+        let visualMaxRight = 0;
+        let visualMaxBottom = 0;
+        const visualNodes = document.querySelectorAll('canvas, svg, img, iframe');
+        visualNodes.forEach((node) => {
+          const rect = node.getBoundingClientRect();
+          const left = rect.left + window.scrollX;
+          const right = rect.right + window.scrollX;
+          const bottom = rect.bottom + window.scrollY;
+          if (left < visualMinLeft) visualMinLeft = left;
+          if (right > visualMaxRight) visualMaxRight = right;
+          if (bottom > visualMaxBottom) visualMaxBottom = bottom;
+        });
+        return {
+          docWidth,
+          docHeight,
+          visualMinLeft: Number.isFinite(visualMinLeft) ? Math.floor(visualMinLeft) : 0,
+          visualMaxRight: Math.ceil(visualMaxRight),
+          visualMaxBottom: Math.ceil(visualMaxBottom),
+        };
       });
-      return {
-        docWidth,
-        docHeight,
-        visualMinLeft: Number.isFinite(visualMinLeft) ? Math.floor(visualMinLeft) : 0,
-        visualMaxRight: Math.ceil(visualMaxRight),
-        visualMaxBottom: Math.ceil(visualMaxBottom),
-      };
-    });
+    } catch (error) {
+      this.warnDetachedFrame('getPageDimensions', error);
+      return this.getFallbackPageDimensions();
+    }
   }
 
   private getPdfWidth(dimensions: PageDimensions): number {
@@ -382,11 +410,37 @@ export class ReportService {
 
   private async writeDebugScreenshot(page: Page, submissionId: number, pageIndex: number, attempt: number): Promise<string> {
     const filePath = path.join(os.tmpdir(), `blue-award-${submissionId}-page-${pageIndex + 1}-attempt-${attempt}.png`);
-    await page.screenshot({
-      path: filePath,
-      fullPage: true,
+    await page.screenshot({ path: filePath, fullPage: true }).catch((error) => {
+      this.warnDetachedFrame('writeDebugScreenshot', error);
     });
     return filePath;
+  }
+
+  private async scrollToTop(page: Page): Promise<void> {
+    try {
+      await page.evaluate(() => window.scrollTo(0, 0));
+    } catch (error) {
+      this.warnDetachedFrame('scrollToTop', error);
+    }
+  }
+
+  private getFallbackPageDimensions(): PageDimensions {
+    return {
+      docWidth: this.blueAwardReportConfig.viewport.width,
+      docHeight: this.blueAwardReportConfig.viewport.height,
+      visualMinLeft: 0,
+      visualMaxRight: this.blueAwardReportConfig.viewport.width,
+      visualMaxBottom: this.blueAwardReportConfig.viewport.height,
+    };
+  }
+
+  private warnDetachedFrame(context: string, error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.toLowerCase().includes('detached frame')) {
+      console.warn(`Ignoring transient detached frame during ${context}: ${message}`);
+    } else {
+      console.warn(`Ignoring transient page inspection error during ${context}: ${message}`);
+    }
   }
 
   private async sleep(ms: number): Promise<void> {
