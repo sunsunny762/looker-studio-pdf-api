@@ -1,5 +1,5 @@
 substitutions:
-  _REGION: europe-west2
+  _REGION: asia-south1
   _SERVICE_NAME: looker-studio-pdf-api
 
 steps:

@@ -55,7 +55,7 @@ gcloud builds submit --tag gcr.io/PROJECT_ID/looker-studio-pdf-api
 gcloud run deploy looker-studio-pdf-api \
   --image gcr.io/PROJECT_ID/looker-studio-pdf-api \
   --platform managed \
-  --region europe-west2 \
+  --region asia-south1 \
   --allow-unauthenticated \
   --memory 4Gi \
   --cpu 2 \
@@ -71,5 +71,5 @@ Replace `PROJECT_ID` and region as needed.
 Or deploy using the included Cloud Build config:
 
 ```bash
-gcloud builds submit --config cloudbuild.yaml --substitutions _REGION=europe-west2,_SERVICE_NAME=looker-studio-pdf-api
+gcloud builds submit --config cloudbuild.yaml
 ```
