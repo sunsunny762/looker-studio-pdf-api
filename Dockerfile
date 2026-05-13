@@ -27,7 +27,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev \
+  && npm run install:browser
 
 COPY --from=build /app/dist ./dist
 COPY config ./config

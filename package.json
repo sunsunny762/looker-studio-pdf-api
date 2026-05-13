@@ -6,6 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "install:browser": "node node_modules/puppeteer/install.mjs",
     "start": "node dist/server.js",
     "start:dev": "ts-node src/server.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

@@ -104,20 +104,10 @@ export class ReportService {
     }
 
     try {
-      const page = await browser.newPage();
-      await page.setViewport({
-        width: this.blueAwardReportConfig.viewport.width,
-        height: this.blueAwardReportConfig.viewport.height,
-        deviceScaleFactor: this.blueAwardReportConfig.viewport.deviceScaleFactor,
-      });
-      await page.setExtraHTTPHeaders({
-        'Accept-Language': 'en-US,en;q=0.9',
-      });
-
       const pagePdfBuffers: Buffer[] = [];
       for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
         const urlWithParams = this.buildLookerStudioPageUrlWithSubmissionId(pages[pageIndex], submissionId, companyName);
-        const pagePdfBuffer = await this.capturePagePdf(page, urlWithParams, submissionId, pageIndex);
+        const pagePdfBuffer = await this.capturePagePdf(browser, urlWithParams, submissionId, pageIndex);
         pagePdfBuffers.push(pagePdfBuffer);
       }
 
@@ -142,11 +132,13 @@ export class ReportService {
     }
   }
 
-  private async capturePagePdf(page: Page, urlWithParams: string, submissionId: number, pageIndex: number): Promise<Buffer> {
+  private async capturePagePdf(browser: Browser, urlWithParams: string, submissionId: number, pageIndex: number): Promise<Buffer> {
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= this.blueAwardReportConfig.behavior.maxAttempts; attempt++) {
+      let page: Page | undefined;
       try {
+        page = await this.createConfiguredPage(browser);
         await page.goto(urlWithParams, {
           waitUntil: this.blueAwardReportConfig.render.gotoWaitUntil,
           timeout: this.blueAwardReportConfig.behavior.navigationTimeoutMs,
@@ -195,10 +187,25 @@ export class ReportService {
           break;
         }
         await this.sleep(this.blueAwardReportConfig.behavior.retryDelayMs);
+      } finally {
+        await page?.close().catch(() => undefined);
       }
     }
 
     throw lastError instanceof Error ? lastError : new Error('Failed to capture Looker Studio page');
+  }
+
+  private async createConfiguredPage(browser: Browser): Promise<Page> {
+    const page = await browser.newPage();
+    await page.setViewport({
+      width: this.blueAwardReportConfig.viewport.width,
+      height: this.blueAwardReportConfig.viewport.height,
+      deviceScaleFactor: this.blueAwardReportConfig.viewport.deviceScaleFactor,
+    });
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+    });
+    return page;
   }
 
   private async waitForReportContent(page: Page): Promise<boolean> {
