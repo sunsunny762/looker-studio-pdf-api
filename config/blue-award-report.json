@@ -8,17 +8,17 @@
     "https://lookerstudio.google.com/reporting/04bc636b-75ac-4a91-8471-727b8a512ca9/page/p_l2a53iy7zd"
   ],
   "lookerCaptureReadyTimeoutMs": 10000,
-  "lookerPostLoadDelayMs": 10000,
+  "lookerPostLoadDelayMs": 5000,
   "viewport": {
     "width": 1300,
     "height": 1798,
     "deviceScaleFactor": 1
   },
   "trims": {
-    "left": 0,
-    "top": 0,
-    "right": 0,
-    "bottom": 0
+    "left": 22,
+    "top": 46,
+    "right": 158,
+    "bottom": 4
   },
   "pdfLimits": {
     "maxWidth": 3000,
