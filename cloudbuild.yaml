@@ -1,0 +1,41 @@
+substitutions:
+  _REGION: europe-west2
+  _SERVICE_NAME: looker-studio-pdf-api
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_NAME}
+      - --image
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}
+      - --region
+      - ${_REGION}
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --memory
+      - 1Gi
+      - --cpu
+      - "1"
+      - --timeout
+      - "300"
+      - --set-env-vars
+      - LOOKER_PUPPETEER_HEADLESS=true,LOOKER_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+images:
+  - gcr.io/$PROJECT_ID/${_SERVICE_NAME}
