@@ -33,6 +33,19 @@ export class ReportService {
   private readonly lookerStudioSubmissionUrlParamKey = this.blueAwardReportConfig.lookerStudioSubmissionUrlParamKey;
   private readonly defaultBlueAwardPageUrls = this.blueAwardReportConfig.defaultBlueAwardPageUrls;
 
+  public getRuntimeConfigSummary() {
+    return {
+      trims: this.blueAwardReportConfig.trims,
+      viewport: this.blueAwardReportConfig.viewport,
+      pdfLimits: this.blueAwardReportConfig.pdfLimits,
+      lookerCaptureReadyTimeoutMs: this.blueAwardReportConfig.lookerCaptureReadyTimeoutMs,
+      lookerPostLoadDelayMs: this.blueAwardReportConfig.lookerPostLoadDelayMs,
+      navigationTimeoutMs: this.blueAwardReportConfig.behavior.navigationTimeoutMs,
+      maxAttempts: this.blueAwardReportConfig.behavior.maxAttempts,
+      browserHeadless: this.blueAwardReportConfig.behavior.browserHeadless,
+    };
+  }
+
   public buildLookerStudioPageUrlWithSubmissionId(pageUrl: string, submissionId: number, companyName?: string): string {
     let parsedUrl: URL;
     try {

@@ -31,6 +31,10 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
+app.get('/debug/config', (_req: Request, res: Response) => {
+  res.json(reportService.getRuntimeConfigSummary());
+});
+
 app.get('/report/looker-studio/blue-award/merged-download', async (req: Request, res: Response) => {
   try {
     const submissionIdValue = getFirstQueryValue(req.query.submissionId) || getFirstQueryValue(req.query.p_submission_id);
