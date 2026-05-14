@@ -3,16 +3,16 @@ FROM node:20-bookworm-slim AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm install --force
 
-COPY tsconfig.json ./
+COPY tsconfig.json nest-cli.json ./
 COPY src ./src
 RUN npm run build
 
 FROM node:20-bookworm-slim
 
-ENV NODE_ENV=production
-ENV PORT=8080
+ENV NODE_ENV=staging
+ENV PORT=3000
 ENV LOOKER_PUPPETEER_HEADLESS=true
 ENV LOOKER_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
@@ -24,7 +24,8 @@ RUN apt-get update \
     fonts-liberation \
     fonts-noto-color-emoji \
     ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/* \
+  && mkdir -p data uploads logs
 
 COPY package*.json ./
 RUN npm install --omit=dev \
@@ -32,7 +33,8 @@ RUN npm install --omit=dev \
 
 COPY --from=build /app/dist ./dist
 COPY config ./config
+COPY firebase ./firebase
 
-EXPOSE 8080
+EXPOSE 3000
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/main.js"]

@@ -1,75 +1,90 @@
-# Looker Studio PDF API
+# 🚂 NCZ Portal Backend
 
-Standalone API for generating the Blue Award Looker Studio merged PDF.
+This is the NextJS backend server for the NCZ Portal. It provides RESTful API endpoints for handling requests, integrates with MSSQL for database operations, uses Firebase Admin SDK for authentication and storage, and supports scheduled tasks with cron jobs.
 
-## Endpoint
+## Features
 
-```text
-GET /report/looker-studio/blue-award/merged-download
-```
+- RESTful API for core functionality
+- Database integration with MSSQL via TypeORM
+- Firebase Admin SDK for user authentication and cloud storage
+- Scheduled tasks using @nestjs/schedule
+- File upload handling with processing (e.g., images via Sharp)
+- Environment-based configuration
 
-Query parameters:
+## Prerequisites
 
-- `submissionId` or `p_submission_id`: optional positive integer. Defaults to `12659`.
-- `companyName`: optional filter value.
-- `reportUrl`: optional single Looker Studio page URL. If omitted, all pages from `config/blue-award-report.json` are merged.
-- `fileName`: optional download filename.
+- Node.js (version 18 or higher)
+- pnpm (or npm/yarn) package manager
+- MSSQL database server
+- Firebase project with Admin SDK credentials
 
-Example:
+## Installation
 
-```bash
-curl -L "http://localhost:8080/report/looker-studio/blue-award/merged-download?submissionId=123&companyName=Example%20Ltd" --output blue-award.pdf
-```
+1. Install dependencies:
 
-Default submission example:
+   ```bash
+   pnpm install
+   ```
 
-```bash
-curl -L "http://localhost:8080/report/looker-studio/blue-award/merged-download" --output blue-award.pdf
-```
+2. Copy the example environment file and configure it:
 
-## Local Run
+   ```bash
+   cp .env.example .env
+   ```
 
-```bash
-npm install
-npm run build
-npm start
-```
+   Edit `.env` with your specific configurations (e.g., database credentials, Firebase keys, port).
 
-For visible browser debugging:
+   For Looker Studio export with a public report, no Google auth variables are required.
+   - Optional runtime settings:
+     - `LOOKER_PUPPETEER_HEADLESS=true`
+     - `LOOKER_PUPPETEER_USER_DATA_DIR=./.puppeteer-looker-profile`
+     - `LOOKER_PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome`
 
-```bash
-LOOKER_PUPPETEER_HEADLESS=false npm run start:dev
-```
+   If report generation runs on a server, make sure the Puppeteer browser is available there as well. Installing the npm package alone is not always enough if browser download is skipped during deploy.
+   - Install dependencies with scripts enabled so Puppeteer can download Chromium.
+   - Or set `LOOKER_PUPPETEER_EXECUTABLE_PATH` to an existing Chrome/Chromium binary on the server.
 
-## Docker
+   For the external Python/AI service the portal calls, set `PYTHON_API_BASE_URL`. It defaults to `https://ncz-ai-server-179643055854.me-west1.run.app` when not provided.
 
-```bash
-docker build -t looker-studio-pdf-api .
-docker run --rm -p 8080:8080 looker-studio-pdf-api
-```
+3. Ensure your MSSQL database is running and the connection string is set in `.env`.
 
-## Google Cloud Run
+## Running the Project
 
-```bash
-gcloud builds submit --tag gcr.io/PROJECT_ID/looker-studio-pdf-api
-gcloud run deploy looker-studio-pdf-api \
-  --image gcr.io/PROJECT_ID/looker-studio-pdf-api \
-  --platform managed \
-  --region asia-south1 \
-  --allow-unauthenticated \
-  --memory 4Gi \
-  --cpu 2 \
-  --timeout 900 \
-  --concurrency 1 \
-  --cpu-boost \
-  --startup-probe httpGet.path=/health,initialDelaySeconds=0,timeoutSeconds=10,periodSeconds=10,failureThreshold=6 \
-  --set-env-vars LOOKER_PUPPETEER_HEADLESS=true,LOOKER_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-```
+### Development
 
-Replace `PROJECT_ID` and region as needed.
-
-Or deploy using the included Cloud Build config:
+Start the development server with hot-reload:
 
 ```bash
-gcloud builds submit --config cloudbuild.yaml
+pnpm run start:dev
+```
+
+The app will run on `http://localhost:3001` (or the port specified in `.env`).
+
+### Production
+
+Build and start the production server:
+
+```bash
+pnpm run build
+pnpm run start:prod
+```
+
+For production Looker Studio export configuration, use `.env.production.example` as reference.
+
+### Testing
+
+Run unit tests:
+
+```bash
+pnpm run test
+```
+
+Run e2e tests:
+
+```bash
+pnpm run test:e2e
+
+
+
+We need to install Chrome/Chromium on the server. After that, Puppeteer will work properly to generate the PDF
 ```
