@@ -12,7 +12,7 @@ export class FirebaseService {
         const dbPath = process.env.DATABASE_URL;
         const firebaseCert = loadFirebaseServiceAccount();
         this.app = admin.initializeApp({
-            credential: admin.credential.cert(firebaseCert),
+            credential: admin.credential.cert(firebaseCert as admin.ServiceAccount),
             databaseURL: dbPath
         }, 'app');
         this.db = this.app?.firestore();
