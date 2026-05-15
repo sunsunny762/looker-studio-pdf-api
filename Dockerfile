@@ -33,7 +33,6 @@ RUN npm install --omit=dev \
 
 COPY --from=build /app/dist ./dist
 COPY config ./config
-COPY firebase ./firebase
 
 EXPOSE 3000
 
