@@ -1,0 +1,62 @@
+substitutions:
+  _REGION: asia-south1
+  _SERVICE_NAME: looker-studio-pdf-api
+  _MEMORY: 4Gi
+  _CPU: "2"
+  _TIMEOUT: "900"
+  _CONCURRENCY: "1"
+  _PORT: "3000"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$SHORT_SHA
+      - -t
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$SHORT_SHA
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_NAME}
+      - --image
+      - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$SHORT_SHA
+      - --region
+      - ${_REGION}
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --memory
+      - ${_MEMORY}
+      - --cpu
+      - ${_CPU}
+      - --timeout
+      - ${_TIMEOUT}
+      - --concurrency
+      - ${_CONCURRENCY}
+      - --port
+      - ${_PORT}
+      - --cpu-boost
+      - --set-env-vars
+      - LOOKER_PUPPETEER_HEADLESS=true,LOOKER_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+images:
+  - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$SHORT_SHA
+  - gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest
