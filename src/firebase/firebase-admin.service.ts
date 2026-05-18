@@ -14,7 +14,6 @@ export class FirebaseAdminService implements OnModuleInit {
         console.log('Firebase Admin initialized successfully');
       } catch (error) {
         console.error('Firebase Admin initialization error:', error);
-        throw error;
       }
     }
   }

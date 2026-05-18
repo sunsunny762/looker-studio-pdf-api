@@ -31,16 +31,26 @@ export class DocumentsService {
     private readonly logger = new Logger(DocumentsService.name);
     private _directory: string;
     private _archiveDirectory: string;
-    private blobServiceClient: BlobServiceClient;
+    private blobServiceClient?: BlobServiceClient;
 
-    constructor(private readonly databaseService: DatabaseService) {
+    constructor(private readonly databaseService: DatabaseService) {}
+
+    private getBlobServiceClient(): BlobServiceClient {
         const accountName = process.env.STORAGE_ACCOUNT_NAME;
         const accountKey = process.env.STORAGE_ACCOUNT_KEY;
+
+        if (!accountName || !accountKey) {
+            throw new Error('STORAGE_ACCOUNT_NAME and STORAGE_ACCOUNT_KEY environment variables are required for document storage.');
+        }
+        if (this.blobServiceClient) {
+            return this.blobServiceClient;
+        }
 
         const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
         const blobUrl = `https://${accountName}.blob.core.windows.net`;
 
         this.blobServiceClient = new BlobServiceClient(blobUrl, sharedKeyCredential);
+        return this.blobServiceClient;
     }
     
     public async initialise(directory: string): Promise<void> {
@@ -542,7 +552,7 @@ export class DocumentsService {
     }
 
     public async downloadFile(blobName: string, containerName: string): Promise<Buffer> {
-        const containerClient = this.blobServiceClient.getContainerClient(containerName);
+        const containerClient = this.getBlobServiceClient().getContainerClient(containerName);
         const blobClient = containerClient.getBlobClient(blobName);
         const downloadBlockBlobResponse = await blobClient.download();
 
@@ -875,7 +885,7 @@ export class DocumentsService {
     };
 
     public async uploadBufferAtPath(buffer: Buffer, blobName: string, container: string, mimeType: string): Promise<void> {
-        const containerClient = this.blobServiceClient.getContainerClient(container);
+        const containerClient = this.getBlobServiceClient().getContainerClient(container);
         await containerClient.createIfNotExists();
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
         await blockBlobClient.uploadData(buffer, {

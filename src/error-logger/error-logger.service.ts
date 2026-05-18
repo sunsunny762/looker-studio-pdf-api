@@ -16,8 +16,13 @@ export class ErrorLoggerService extends Logger {
     }
 
     public async onModuleInit(): Promise<void> {
-      if(!this.databaseService.isConnected)
-        await this.databaseService.initialise();
+      if (!this.databaseService.isConnected) {
+        try {
+          await this.databaseService.initialise();
+        } catch (error) {
+          this.writeLogToFile('ERROR', `ErrorLoggerService database startup failed: ${error}`);
+        }
+      }
     }
     
     private logDir: string = './logs'; private keepLogsForDays: number = 30;

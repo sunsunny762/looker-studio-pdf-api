@@ -13,19 +13,21 @@ export class StripePaymentGateway implements IPaymentGateway {
   readonly gatewayName = 'stripe';
 
   private readonly logger = new Logger(StripePaymentGateway.name);
-  private readonly stripe: Stripe;
-  private readonly webhookSecret: string;
+  private stripe?: Stripe;
 
-  constructor() {
+  private getStripe(): Stripe {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
       throw new Error('STRIPE_SECRET_KEY environment variable is not set.');
     }
-    this.webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
-    this.stripe = new Stripe(secretKey, { apiVersion: '2026-03-25.dahlia' });
+    if (!this.stripe) {
+      this.stripe = new Stripe(secretKey, { apiVersion: '2026-03-25.dahlia' });
+    }
+    return this.stripe;
   }
 
   async createCheckoutSession(params: CreateSessionParams): Promise<CreateSessionResult> {
+    const stripe = this.getStripe();
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = params.lineItems.map(item => ({
       price_data: {
         currency: params.currency.toLowerCase(),
@@ -62,7 +64,7 @@ export class StripePaymentGateway implements IPaymentGateway {
       });
     }
 
-    const session = await this.stripe.checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: lineItems,
@@ -82,7 +84,8 @@ export class StripePaymentGateway implements IPaymentGateway {
   }
 
   async verifySession(sessionId: string): Promise<VerifySessionResult> {
-    const session = await this.stripe.checkout.sessions.retrieve(sessionId);
+    const stripe = this.getStripe();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     let status: VerifySessionResult['status'] = 'pending';
     if (session.payment_status === 'paid') {
@@ -102,13 +105,15 @@ export class StripePaymentGateway implements IPaymentGateway {
   }
 
   async constructWebhookEvent(rawBody: Buffer, signature: string): Promise<WebhookEvent> {
-    if (!this.webhookSecret) {
+    const stripe = this.getStripe();
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
+    if (!webhookSecret) {
       throw new Error('STRIPE_WEBHOOK_SECRET environment variable is not set.');
     }
 
     let event: Stripe.Event;
     try {
-      event = this.stripe.webhooks.constructEvent(rawBody, signature, this.webhookSecret);
+      event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
     } catch (err) {
       this.logger.error('Stripe webhook signature verification failed', err);
       throw err;

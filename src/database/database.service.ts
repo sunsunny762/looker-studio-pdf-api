@@ -13,13 +13,17 @@ export class DatabaseService {
     private readonly maxRetries = 3;
     private readonly retryDelay = 2000; // 2 seconds
 
+    private getEnvValue(name: string, fallback?: string): string | undefined {
+        return (process.env[name] ?? fallback)?.trim();
+    }
+
     public async initialise(): Promise<void> {
         this.logger.log("Starting database services");
         this.databaseConfig = ({
-            user: process.env.DB_USERNAME,
-            password: process.env.DB_PASSWORD,
-            server: process.env.DB_HOST || "localhost",
-            database: process.env.DB_DATABASE || "default",
+            user: this.getEnvValue("DB_USERNAME"),
+            password: this.getEnvValue("DB_PASSWORD"),
+            server: this.getEnvValue("DB_HOST", "localhost"),
+            database: this.getEnvValue("DB_DATABASE", "default"),
             port: 1433,
             requestTimeout: 600000,
             connectionTimeout: 30000,

@@ -14,6 +14,16 @@ import { join } from 'path';
 dotenv.config();
 const port = process.env.PORT || 3000;
 
+async function runStartupHook(name: string, hook: () => void | Promise<void>): Promise<boolean> {
+  try {
+    await hook();
+    return true;
+  } catch (error) {
+    console.error(`${name} startup failed`, error);
+    return false;
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
@@ -33,13 +43,17 @@ async function bootstrap() {
   await app.listen(port);
 
   // Explicit service initialisation hooks
-  app.get(UtilitiesService).initialise();
-  app.get(FirebaseService).initialise();
+  await runStartupHook('UtilitiesService', () => app.get(UtilitiesService).initialise());
+  await runStartupHook('FirebaseService', () => app.get(FirebaseService).initialise());
 
-  await app.get(DatabaseService).initialise();
+  const databaseReady = await runStartupHook('DatabaseService', () => app.get(DatabaseService).initialise());
 
   const fullScheduler = (!process.env.DISABLE_SCHEDULER || process.env.DISABLE_SCHEDULER!='1');
-  app.get(SchedulerService).initialise(fullScheduler);
+  if (databaseReady) {
+    await runStartupHook('SchedulerService', () => app.get(SchedulerService).initialise(fullScheduler));
+  } else {
+    console.warn('SchedulerService startup skipped because database is not connected.');
+  }
 
   console.log(`Application is running on: ${await app.getUrl()}`);
 

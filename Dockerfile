@@ -5,14 +5,14 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --force
 
-COPY tsconfig.json nest-cli.json ./
+COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
 RUN npm run build
 
 FROM node:20-bookworm-slim
 
 ENV NODE_ENV=staging
-ENV PORT=3000
+ENV PORT=8080
 ENV LOOKER_PUPPETEER_HEADLESS=true
 ENV LOOKER_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
@@ -28,12 +28,12 @@ RUN apt-get update \
   && mkdir -p data uploads logs
 
 COPY package*.json ./
-RUN npm install --omit=dev \
+RUN npm install --omit=dev --force \
   && npm run install:browser
 
 COPY --from=build /app/dist ./dist
 COPY config ./config
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["node", "dist/main.js"]
